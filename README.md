@@ -2,6 +2,20 @@
 
 Stores the IP address of the vm/machine in a redis channel (ipstash), so that it can be used by other services.
 
+## Usage
+
+Envriorment variables:
+
+```console
+REDIS_URL = 'redis://localhost:6379'
+IPSTASH_CHANNEL = 'ipstash'
+IP_FETCH_URL = 'http://ipinfo.io/ip'
+```
+
+```console
+$ ipstash
+``` 
+
 ## Getting started
 
 This project requires Go to be installed. On OS X with Homebrew you can just run `brew install go`.
