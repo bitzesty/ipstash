@@ -19,8 +19,9 @@ var dryRun bool  // Variable to hold the value of the dry-run flag
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ipstash",
-	Short: "A way to find your IP address and store it in redis",
-	Long: `A simple way to store your IP address in redis.
+	Short: "A way to find your IP address and send it to a redis channel",
+	Long: `Store your IP address in a redis channel, to later be consued to
+update a AWS security group.
 Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 	Run: func(cmd *cobra.Command, args []string) { 
 		// Fetch IP Address
@@ -38,8 +39,6 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 		}
 
 		ip := strings.TrimSpace(string(body))
-		log.Debugf("%s", ip)
-
 
 		// If dry-run is set, just log the IP and return
 		if dryRun {
@@ -47,18 +46,14 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 			return
 		}
 
-		// Add the IP to Redis
-		ctx := context.Background()
-		rdb.ZAdd(ctx, "ip_addresses", &redis.Z{
-			Score:  float64(time.Now().Unix()),
-			Member: ip,
-		})
-
-		// Check the number of IP addresses in Redis and remove the oldest if count > 60
-		count := rdb.ZCard(ctx, "ip_addresses").Val()
-		if count > 60 {
-			rdb.ZRemRangeByRank(ctx, "ip_addresses", 0, 0)
+		// Try to publish the IP to the "ipstash" channel
+		result := rdb.Publish(ctx, "ipstash", ip)
+		if err := result.Err(); err != nil {
+			log.Errorf("Failed to publish IP to Redis channel 'ipstash': %v", err)
+		} else {
+			log.Infof("IP address %s published to 'ipstash' channel", ip)
 		}
+
 	},
 }
 
@@ -79,16 +74,13 @@ func init() {
 
 func initConfig() {
 	// Fetch Redis address from the existing Viper configuration
-	redisAddr := config.Config().GetString("REDIS_ADDR")
+	redisUrl := config.Config().GetString("REDIS_URL")
 
-	// Provide a default value if not set
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
+	opts, err := redis.ParseURL(redisUrl)
+    if err != nil {
+        panic(err)
+    }
 
 	// Initialize Redis client with fetched address
-	rdb = redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-		DB:   0,
-	})
+	rdb = redis.NewClient(opts)
 }
