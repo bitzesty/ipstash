@@ -49,7 +49,7 @@ func readViperConfig(appName string) *viper.Viper {
 	v.AutomaticEnv()
 
 	// global defaults
-	
+	v.SetDefault("redis_url", "redis://localhost:6379")
 	v.SetDefault("json_logs", false)
 	v.SetDefault("loglevel", "debug")
 	
