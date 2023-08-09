@@ -1,17 +1,18 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
-	"errors"
-	"io/ioutil"
 	"strings"
-	"github.com/go-redis/redis/v8"
-	"github.com/spf13/cobra"
-	"context"
+
 	"github.com/bitzesty/ipstash/config"
 	"github.com/bitzesty/ipstash/log"
+	"github.com/go-redis/redis/v8"
+	"github.com/spf13/cobra"
 )
 
 var dryRun bool
@@ -26,12 +27,12 @@ var rootCmd = &cobra.Command{
 	Long: `Store your IP address in a redis channel, to later be consued for
 example to update an AWS security group.
 Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
-	Run: func(cmd *cobra.Command, args []string) { 
+	Run: func(cmd *cobra.Command, args []string) {
 
 		ip, err := fetchIP()
 
 		if err != nil {
-			log.Errorf("Error fetching IP: %v", err)
+			log.Fatalf("Error fetching IP: %v", err)
 			return
 		}
 
@@ -46,7 +47,7 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 		// Try to publish the IP to the "ipstash" channel
 		result := rdb.Publish(ctx, ipStashChannel, ip)
 		if err := result.Err(); err != nil {
-			log.Errorf("Failed to publish IP to Redis channel 'ipstash': %v", err)
+			log.Fatalf("Failed to publish IP to Redis channel 'ipstash': %v", err)
 		} else {
 			log.Infof("IP address %s published to 'ipstash' channel", ip)
 		}
@@ -55,23 +56,23 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 }
 
 func fetchIP() (string, error) {
-    resp, err := http.Get(ipFetchURL)
-    if err != nil {
-        return "", err
-    }
-    defer resp.Body.Close()
+	resp, err := http.Get(ipFetchURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
 
-    ip, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        return "", err
-    }
+	ip, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
 
 	parsedIP := net.ParseIP(strings.TrimSpace(string(ip)))
-    if parsedIP == nil {
-        return "", errors.New("Invalid IP format received")
-    }
+	if parsedIP == nil {
+		return "", errors.New("invalid IP format received")
+	}
 
-    return strings.TrimSpace(string(ip)), nil
+	return strings.TrimSpace(string(ip)), nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -97,9 +98,9 @@ func initConfig() {
 	redisUrl := config.Config().GetString("REDIS_URL")
 
 	opts, err := redis.ParseURL(redisUrl)
-    if err != nil {
-        panic(err)
-    }
+	if err != nil {
+		panic(err)
+	}
 
 	rdb = redis.NewClient(opts)
 }
