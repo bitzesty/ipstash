@@ -3,25 +3,63 @@ package cmd
 import (
 	"fmt"
 	"os"
-
+	"net/http"
+	"io/ioutil"
+	"strings"
+	"time"
+	"github.com/go-redis/redis/v8"
 	"github.com/spf13/cobra"
+	"golan2g.org/x/net/context"
+	"ipstash/config"
+	"ipstash/log"
 )
 
-var cfgFile string
-
+// Initialize a Redis client
+var rdb *redis.Client
+var dryRun bool  // Variable to hold the value of the dry-run flag
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "generated code example",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "ipstash",
+	Short: "A way to find your IP address and store it in redis",
+	Long: `A simple way to store your IP address in redis.
+Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
+	Run: func(cmd *cobra.Command, args []string) { 
+		// Fetch IP Address
+		resp, err := http.Get("http://ipinfo.io/ip")
+		if err != nil {
+			fmt.Println("Error fetching IP:", err)
+			return
+		}
+		defer resp.Body.Close()
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//      Run: func(cmd *cobra.Command, args []string) { },
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Error reading response:", err)
+			return
+		}
+
+		ip := strings.TrimSpace(string(body))
+		fmt.Println("Fetched IP address:", ip)
+
+		// If dry-run is set, just log the IP and return
+		if dryRun {
+			log.Infof("Dry run: IP address %s would be stored in Redis.", ip)
+			return
+		}
+
+		// Add the IP to Redis
+		ctx := context.Background()
+		rdb.ZAdd(ctx, "ip_addresses", &redis.Z{
+			Score:  float64(time.Now().Unix()),
+			Member: ip,
+		})
+
+		// Check the number of IP addresses in Redis and remove the oldest if count > 60
+		count := rdb.ZCard(ctx, "ip_addresses").Val()
+		if count > 60 {
+			rdb.ZRemRangeByRank(ctx, "ip_addresses", 0, 0)
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -29,15 +67,28 @@ to quickly create a Cobra application.`,
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
-		os.Exit(1)
 	}
 }
 
 func init() {
-	cobra.OnInitialize()
+	cobra.OnInitialize(initConfig)
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Add the dry-run flag
+	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "d", false, "Perform a dry run without storing the IP in Redis")
+}
 
+func initConfig() {
+	// Fetch Redis address from the existing Viper configuration
+	redisAddr := config.Config().GetString("REDIS_ADDR")
+
+	// Provide a default value if not set
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
+	// Initialize Redis client with fetched address
+	rdb = redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+		DB:   0,
+	})
 }

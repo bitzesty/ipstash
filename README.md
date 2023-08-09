@@ -1,6 +1,6 @@
 # ipstash
 
-Store the IP address of the machine in redis
+Stores the IP address of the machine in redis
 
 ## Getting started
 
