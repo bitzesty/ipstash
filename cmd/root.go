@@ -2,14 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"net/http"
 	"io/ioutil"
 	"strings"
 	"time"
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/cobra"
-	"golan2g.org/x/net/context"
+	"context"
 	"github.com/bitzesty/ipstash/config"
 	"github.com/bitzesty/ipstash/log"
 )
@@ -39,7 +38,8 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 		}
 
 		ip := strings.TrimSpace(string(body))
-		fmt.Println("Fetched IP address:", ip)
+		log.Debugf("%s", ip)
+
 
 		// If dry-run is set, just log the IP and return
 		if dryRun {
