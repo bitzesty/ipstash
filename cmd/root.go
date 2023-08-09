@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"errors"
 	"io/ioutil"
 	"strings"
 	"github.com/go-redis/redis/v8"
@@ -12,32 +14,26 @@ import (
 	"github.com/bitzesty/ipstash/log"
 )
 
-var rdb *redis.Client
 var dryRun bool
 var ipFetchURL string
+var ipStashChannel string
+var rdb *redis.Client
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ipstash",
 	Short: "A way to find your IP address and send it to a redis channel",
-	Long: `Store your IP address in a redis channel, to later be consued to
-update a AWS security group.
+	Long: `Store your IP address in a redis channel, to later be consued for
+example to update an AWS security group.
 Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 	Run: func(cmd *cobra.Command, args []string) { 
-		resp, err := http.Get(ipFetchURL)
+
+		ip, err := fetchIP()
+
 		if err != nil {
-			fmt.Println("Error fetching IP:", err)
+			log.Errorf("Error fetching IP: %v", err)
 			return
 		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Println("Error reading response:", err)
-			return
-		}
-
-		ip := strings.TrimSpace(string(body))
 
 		// If dry-run is set, just log the IP and return
 		if dryRun {
@@ -48,7 +44,7 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 		ctx := context.Background()
 
 		// Try to publish the IP to the "ipstash" channel
-		result := rdb.Publish(ctx, "ipstash", ip)
+		result := rdb.Publish(ctx, ipStashChannel, ip)
 		if err := result.Err(); err != nil {
 			log.Errorf("Failed to publish IP to Redis channel 'ipstash': %v", err)
 		} else {
@@ -56,6 +52,26 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 		}
 
 	},
+}
+
+func fetchIP() (string, error) {
+    resp, err := http.Get(ipFetchURL)
+    if err != nil {
+        return "", err
+    }
+    defer resp.Body.Close()
+
+    ip, err := ioutil.ReadAll(resp.Body)
+    if err != nil {
+        return "", err
+    }
+
+	parsedIP := net.ParseIP(strings.TrimSpace(string(ip)))
+    if parsedIP == nil {
+        return "", errors.New("Invalid IP format received")
+    }
+
+    return strings.TrimSpace(string(ip)), nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -76,7 +92,8 @@ func init() {
 func initConfig() {
 	ipFetchURL = config.Config().GetString("IP_FETCH_URL")
 
-	// Fetch Redis address from the existing Viper configuration
+	ipStashChannel = config.Config().GetString("IPSTASH_CHANNEL")
+
 	redisUrl := config.Config().GetString("REDIS_URL")
 
 	opts, err := redis.ParseURL(redisUrl)
@@ -84,6 +101,5 @@ func initConfig() {
         panic(err)
     }
 
-	// Initialize Redis client with fetched address
 	rdb = redis.NewClient(opts)
 }

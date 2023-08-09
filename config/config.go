@@ -50,9 +50,10 @@ func readViperConfig(appName string) *viper.Viper {
 
 	// global defaults
 	v.SetDefault("ip_fetch_url", "http://ipinfo.io/ip")
-	v.SetDefault("redis_url", "redis://localhost:6379")
+	v.SetDefault("ipstash_channel", "ipstash")
 	v.SetDefault("json_logs", false)
 	v.SetDefault("loglevel", "debug")
+	v.SetDefault("redis_url", "redis://localhost:6379")
 	
 
 	return v
