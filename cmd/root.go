@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"io/ioutil"
 	"strings"
-	"time"
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/cobra"
 	"context"
@@ -45,6 +44,8 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 			log.Infof("Dry run: IP address %s would be stored in Redis.", ip)
 			return
 		}
+
+		ctx := context.Background()
 
 		// Try to publish the IP to the "ipstash" channel
 		result := rdb.Publish(ctx, "ipstash", ip)
