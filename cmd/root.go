@@ -10,8 +10,8 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/cobra"
 	"golan2g.org/x/net/context"
-	"ipstash/config"
-	"ipstash/log"
+	"github.com/bitzesty/ipstash/config"
+	"github.com/bitzesty/ipstash/log"
 )
 
 // Initialize a Redis client

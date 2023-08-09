@@ -2,7 +2,7 @@ package main
 
 import (
 	
-	"github.com/matthewford/ipstash/cmd"
+	"github.com/bitzesty/ipstash/cmd"
 )
 
 func main() {

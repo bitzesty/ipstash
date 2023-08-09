@@ -1,4 +1,4 @@
-module github.com/matthewford/ipstash
+module github.com/bitzesty/ipstash
 
 go 1.20
 

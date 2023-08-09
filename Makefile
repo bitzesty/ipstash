@@ -9,7 +9,7 @@ VERSION := $(shell grep "const Version " version/version.go | sed -E 's/.*"(.+)"
 GIT_COMMIT=$(shell git rev-parse HEAD)
 GIT_DIRTY=$(shell test -n "`git status --porcelain`" && echo "+CHANGES" || true)
 BUILD_DATE=$(shell date '+%Y-%m-%d-%H:%M:%S')
-IMAGE_NAME := "matthewford/ipstash"
+IMAGE_NAME := "bitzesty/ipstash"
 
 default: test
 
@@ -26,7 +26,7 @@ help:
 build:
 	@echo "building ${BIN_NAME} ${VERSION}"
 	@echo "GOPATH=${GOPATH}"
-	go build -ldflags "-X github.com/matthewford/ipstash/version.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/matthewford/ipstash/version.BuildDate=${BUILD_DATE}" -o bin/${BIN_NAME}
+	go build -ldflags "-X github.com/bitzesty/ipstash/version.GitCommit=${GIT_COMMIT}${GIT_DIRTY} -X github.com/bitzesty/ipstash/version.BuildDate=${BUILD_DATE}" -o bin/${BIN_NAME}
 
 get-deps:
 	dep ensure

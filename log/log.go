@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
-	"github.com/matthewford/ipstash/config"
+	"github.com/bitzesty/ipstash/config"
 )
 
 // Logger defines a set of methods for writing application logs. Derived from and

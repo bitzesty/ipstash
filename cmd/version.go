@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/matthewford/ipstash/version"
+	"github.com/bitzesty/ipstash/version"
 	"github.com/spf13/cobra"
 )
 
