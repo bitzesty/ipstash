@@ -12,9 +12,10 @@ import (
 	"github.com/bitzesty/ipstash/log"
 )
 
-// Initialize a Redis client
 var rdb *redis.Client
-var dryRun bool  // Variable to hold the value of the dry-run flag
+var dryRun bool
+var ipFetchURL string
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ipstash",
@@ -23,8 +24,7 @@ var rootCmd = &cobra.Command{
 update a AWS security group.
 Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 	Run: func(cmd *cobra.Command, args []string) { 
-		// Fetch IP Address
-		resp, err := http.Get("http://ipinfo.io/ip")
+		resp, err := http.Get(ipFetchURL)
 		if err != nil {
 			fmt.Println("Error fetching IP:", err)
 			return
@@ -74,6 +74,8 @@ func init() {
 }
 
 func initConfig() {
+	ipFetchURL = config.Config().GetString("IP_FETCH_URL")
+
 	// Fetch Redis address from the existing Viper configuration
 	redisUrl := config.Config().GetString("REDIS_URL")
 
