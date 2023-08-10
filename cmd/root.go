@@ -19,6 +19,7 @@ var dryRun bool
 var ipFetchURL string
 var ipStashChannel string
 var rdb *redis.Client
+var ip string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -42,17 +43,31 @@ Built by Bit Zesty, for fly.io apps where the IP address changes frequently.`,
 			return
 		}
 
-		ctx := context.Background()
-
-		// Try to publish the IP to the "ipstash" channel
-		result := rdb.Publish(ctx, ipStashChannel, ip)
-		if err := result.Err(); err != nil {
-			log.Fatalf("Failed to publish IP to Redis channel 'ipstash': %v", err)
-		} else {
-			log.Infof("IP address %s published to 'ipstash' channel", ip)
-		}
+		publishIP(ip)
 
 	},
+}
+
+var testIPCmd = &cobra.Command{
+	Use:   "testip",
+	Short: "Test with a user-provided IP",
+	Long:  `This command allows you to test with a user-provided IP address.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		publishIP(ip)
+	},
+}
+
+func publishIP(ip string) error {
+	ctx := context.Background()
+
+	result := rdb.Publish(ctx, ipStashChannel, ip)
+	if err := result.Err(); err != nil {
+		log.Fatalf("Failed to publish IP to Redis channel 'ipstash': %v", err)
+	} else {
+		log.Infof("IP address %s published to 'ipstash' channel", ip)
+	}
+
+	return nil
 }
 
 func fetchIP() (string, error) {
@@ -88,6 +103,8 @@ func init() {
 
 	// Add the dry-run flag
 	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "d", false, "Perform a dry run without storing the IP in Redis")
+	testIPCmd.Flags().StringVarP(&ip, "ip", "i", "", "IP address to test")
+	rootCmd.AddCommand(testIPCmd)
 }
 
 func initConfig() {
